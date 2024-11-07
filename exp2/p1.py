@@ -1,15 +1,18 @@
+from pathlib import Path
+import sys
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import matplotlib.pyplot as plt
-import sys
+import logging
 
 data_path = Path(__file__).resolve().parent / "data"
 sys.path.append(Path(__file__).resolve().parent)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def min_sq_err(x: np.ndarray, phi: callable, y: np.ndarray) -> np.ndarray:
-    """最小二乗法
+    """最小二乗法でのtheta
 
     Args:
         x (np.ndarray): 入力データ
@@ -24,12 +27,15 @@ def min_sq_err(x: np.ndarray, phi: callable, y: np.ndarray) -> np.ndarray:
     N = (phi(x, 0)).shape[1]
     # φの返り値の次元が不明なので、0番目のxを用いて特定
 
+    if (len(y.shape) == 1):
+        y = y.reshape(-1, 1)
+
     inv_mat: np.ndarray = np.zeros((N, N))
     right_mat = np.zeros((N, N))
 
     for row_idx in range(data_size):
-        inv_mat += (phi(x, row_idx).T) @ phi(x, row_idx)
-        right_mat += (phi(x, row_idx).T) @ y[row_idx]
+        inv_mat += np.matmul(phi(x, row_idx).T, phi(x, row_idx))
+        right_mat += np.matmul(phi(x, row_idx).T, y[row_idx])
 
     theta_hat = np.linalg.inv(inv_mat) @ right_mat
     return theta_hat
@@ -62,10 +68,10 @@ def main():
     deg_list = [2**k for k in np.arange(1, 14, 1)]
 
     def phi(x, idx):
-        return np.array(x[idx, 0], x[idx, 1]).reshape(1, -1)
+        return np.array([x[idx, 0], x[idx, 1]]).reshape(1, -1)
 
     theta_process = np.ndarray((len(deg_list), 2))
-    print(theta_process.shape)
+
     for idx, deg in enumerate(deg_list):
         theta, _ = min_sq_err(data[:deg, :-1], phi, data[:deg, -1])
         theta_process[idx, 0] = theta[0]
